@@ -22,7 +22,7 @@ conda activate single-cell
 ```
 
 Then install the remaining R packages from inside R, as described in the setup
-sheet (and in the comments at the end of each environment file).
+sheet. The commands are also listed at the end of each environment file.
 
 ## Why the pinned versions?
 
@@ -35,8 +35,6 @@ versions:
 | SeuratWrappers | commit `729c31edf3` (0.3.0) | newer versions need Seurat 5; older ones fail to convert to monocle3 |
 | leidenbase | 0.1.37 (CRAN) | v0.1.9 is incompatible with igraph 2.0 |
 | monocle3 | [`scb-icbb/monocle3@v1.3.1-igraph2`](https://github.com/scb-icbb/monocle3/tree/v1.3.1-igraph2) | v1.3.1 plus one upstream fix for igraph 2.0; 1.4.x needs BPCells / R 4.4 |
-
-The comments in the environment files explain every pin in detail.
 
 **Do not accept package updates** when R asks during installation
 (`Update all/some/none?` → `n`). Updates can replace the pinned versions and
