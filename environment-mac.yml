@@ -1,0 +1,386 @@
+# Conda environment for "Single Cell Bioinformatics" - Project 1 (scRNAseq)
+# macOS (Intel and Apple Silicon)
+#
+# STRONGLY RECOMMENDED: use mamba instead of plain conda to create this.
+# Plain conda's solver is extremely slow (can take a very long time, or
+# appear to hang) on environments this size. mamba uses a much faster
+# solver and reads the exact same file:
+#
+#   conda install -n base -c conda-forge mamba   # one-time, if you don't have it
+#   mamba env create -f environment-mac.yml
+#   conda activate single-cell
+#
+# If you'd rather stick with plain conda, at least set strict channel
+# priority first - this alone cuts solve time substantially:
+#
+#   conda config --set channel_priority strict
+#   conda env create -f environment-mac.yml
+#
+#
+# (You will see two warnings during creation, on both a first install and a
+# from-scratch rebuild after fully clearing the package cache - confirmed
+# 2026-09-26. Both are benign and expected, not a broken environment:
+#   - "SafetyError: ... r-base ... packages.html has an incorrect size" -
+#     R's own post-install hooks rewrite lib/R/doc/html/packages.html (its
+#     installed-package index) every time another R package is added, so it
+#     naturally outgrows the pristine size conda recorded for r-base alone.
+#     A known false-positive across R/conda-forge environments.
+#   - "ClobberError: ... libgfortran-devel_osx-64 ... gfortran_impl_osx-64
+#     ... ISO_Fortran_binding.h" - these two compiler-toolchain packages
+#     legitimately ship the same header from the same conda-forge build
+#     cycle; conda flags any shared path on principle, whether or not the
+#     content actually conflicts (here it doesn't).
+# Both times the transaction still completed ("Executing transaction: done")
+# and R/Seurat/SingleCellExperiment loaded normally afterwards. Ignore them.
+#
+# Linux users: use environment-linux.yml instead.
+# Windows users: see README-Windows.md - this must be run inside WSL2.
+#
+# Why this file differs from environment-linux.yml:
+# bioconda's Bioconductor-annotation packages (SingleR, celldex) frequently
+# have no native Apple Silicon (osx-arm64) build, and can fail or hang the
+# conda/mamba solver on M-series Macs. They're left out below and installed
+# manually via BiocManager instead - the same fix the worksheet already
+# used for SingleR. Confirmed on Apple Silicon (2026-09-23): the solver
+# also failed on bioconductor-singlecellexperiment for the same reason -
+# see the Rosetta fallback block at the bottom of this file, which fixed it.
+#
+# This environment deliberately pins R 4.2 / Seurat 4.x rather than
+# upgrading to latest: DoubletFinder (required below) has a known,
+# unresolved break against Seurat v5's new Assay5 object structure
+# (github.com/chris-mcginnis-ucsf/DoubletFinder/issues/171). Since the
+# live Seurat docs online now document v5 syntax, point students to the
+# version-matched v4.3 archive instead:
+#   - Guided tutorial:   https://satijalab.org/seurat/archive/v4.3/pbmc3k_tutorial
+#   - Command list:      https://satijalab.org/seurat/archive/v4.3/essential_commands
+#   - Data integration:  https://satijalab.org/seurat/archive/v4.3/integration_introduction
+#   - Full archive index: https://satijalab.org/seurat/articles/archive
+#
+# UPDATING AN EXISTING ENVIRONMENT (e.g. adding CellChat below to a laptop
+# env you already created): do NOT just `mamba install` the new package
+# names on their own - the solver can decide to satisfy them by upgrading
+# r-base/r-seurat, exactly like the earlier Banksy/SeuratWrappers issue.
+# Always re-pin explicitly, e.g. (prefix with CONDA_SUBDIR=osx-64 too if
+# this env was created with the Rosetta fallback below):
+#
+#   CONDA_SUBDIR=osx-64 mamba install -n single-cell \
+#     r-future r-future.apply r-pbapply r-irlba r-nmf r-ggalluvial r-stringr \
+#     r-svglite r-expm r-rtsne r-ggrepel r-circlize r-rcolorbrewer r-cowplot \
+#     bioconductor-complexheatmap r-rspectra r-rcpp r-rcppeigen r-reticulate \
+#     r-scales r-sna r-reshape2 r-fnn r-shape bioconductor-biocgenerics \
+#     r-colorspace r-plyr r-ggpubr r-ggnetwork bioconductor-biocneighbors \
+#     "r-base=4.2*" "r-seurat=4.*"
+#
+# then read the proposed transaction before confirming: it should show only
+# new installs, zero "Upgrade" lines for r-base or r-seurat. If it proposes
+# upgrading either, stop and don't confirm.
+
+name: single-cell
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+
+dependencies:
+  - r-base=4.2
+  - r-devtools
+  - r-remotes
+  - r-biocmanager
+  - r-tidyverse
+  # dbplyr pinned to 2.3.4 (confirmed 2026-10-08): with conda-forge's
+  # r-dbplyr 2.5.0 (and still with 2.4.0), BiocFileCache 2.6.1 (Bioconductor 3.16, the version that
+  # matches R 4.2) fails when celldex/ExperimentHub open the download cache,
+  # e.g. in HumanPrimaryCellAtlasData(): "Failed to collect lazy table ...
+  # Arguments in `...` must be used ... ..1 = Inf". The fixed BiocFileCache
+  # versions need R >= 4.3, so dbplyr is held back instead. Fix for an
+  # existing env (then restart R):
+  #   mamba install -n <env> "r-dbplyr=2.3.4" "r-base=4.2*" "r-seurat=4.*"
+  - r-dbplyr=2.3.4
+  # matrixStats pinned to 1.1.0 (confirmed 2026-10-08): from matrixStats
+  # 1.2.0 on, useNames = NA is defunct, but the Bioconductor 3.16 packages
+  # used by SingleR still pass it, so SingleR() fails with "useNames = NA is
+  # defunct". With 1.1.0 this is only a (harmless) deprecation warning.
+  # Fix for an existing env (then restart R):
+  #   mamba install -n <env> "r-matrixstats=1.1.0" "r-base=4.2*" "r-seurat=4.*"
+  - r-matrixstats=1.1.0
+  - r-dplyr
+  - r-patchwork
+  - r-seurat=4.*
+  - bioconductor-singlecellexperiment
+  - r-enrichr
+  - r-leiden
+  - r-matrix
+  - python=3.10
+  - leidenalg
+  - python-igraph
+  - pip
+
+  # --- CellChat dependencies (Week 4, Sec 10 "Cell-Cell Communication") ---
+  # CellChat itself (sqjin/CellChat) is GitHub-only and installed manually
+  # below, but its ~25 CRAN/Bioconductor Imports are all available as conda
+  # packages, so they're pulled in here to avoid slow/fragile from-source
+  # compiles. List taken directly from CellChat 1.6.1's DESCRIPTION (Imports
+  # field). Unlike SingleR/celldex above, these are kept in the main list
+  # rather than moved to a manual step - if the native osx-arm64 solve fails
+  # on any of them, the Rosetta fallback at the bottom of this file (which
+  # you may already need for bioconductor-singlecellexperiment) covers them
+  # too.
+  - r-future
+  - r-future.apply
+  - r-pbapply
+  - r-irlba
+  - r-nmf
+  - r-ggalluvial
+  - r-stringr
+  - r-svglite
+  - r-expm
+  - r-rtsne
+  - r-ggrepel
+  - r-circlize
+  - r-rcolorbrewer
+  - r-cowplot
+  - bioconductor-complexheatmap
+  - r-rspectra
+  - r-rcpp
+  - r-rcppeigen
+  - r-reticulate
+  - r-scales
+  - r-sna
+  - r-reshape2
+  - r-fnn
+  - r-shape
+  - bioconductor-biocgenerics
+  - r-colorspace
+  - r-plyr
+  - r-ggpubr
+  - r-ggnetwork
+  - bioconductor-biocneighbors
+
+  # --- Monocle3 dependencies (Week 4, Sec 9 "Trajectory Analysis") ---
+  # Pinning monocle3 to release v1.3.1 (not latest/master): the current
+  # official docs state monocle3 >= 1.4.25 needs R >= 4.4.1 (it added a
+  # dependency on BPCells, a newer package). v1.3.1 predates BPCells, only
+  # declares R >= 4.0.0, and uses terra instead - compatible with this R 4.2
+  # / Seurat 4.x environment. Below are v1.3.1's conda-installable deps.
+  - bioconductor-biobase
+  - bioconductor-s4vectors
+  - bioconductor-summarizedexperiment
+  - bioconductor-delayedarray
+  - bioconductor-delayedmatrixstats
+  - bioconductor-hdf5array
+  - bioconductor-batchelor
+  - bioconductor-limma
+  - r-assertthat
+  - r-digest
+  - r-ggrastr
+  - r-grr
+  - r-lme4
+  - r-lmtest
+  - r-mass
+  - r-openssl
+  - r-pbmcapply
+  - r-pheatmap
+  - r-plotly
+  - r-proxy
+  - r-pscl
+  - r-rann
+  - r-rcppannoy
+  - r-rhpcblasctl
+  - r-rsample
+  - r-shiny
+  - r-slam
+  - r-spdep
+  - r-speedglm
+  - r-uwot
+  - r-viridis
+  # terra's own conda-forge R package (r-terra) has, like r-nmf, dropped R
+  # 4.2 support - only the underlying C libraries are pulled in here, and
+  # terra itself is compiled from CRAN source against them in the manual
+  # block below (same fix pattern as the NMF issue).
+  - gdal
+  - geos
+  - proj
+  - sqlite
+
+# --- Install manually after activating the environment ---
+#
+#   conda activate single-cell
+#   xcode-select --install        # if you don't already have Xcode CLT
+#   R
+#
+#   if (!require("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+#   BiocManager::install(c("SingleR", "celldex"))
+#
+#   devtools::install_github("chris-mcginnis-ucsf/DoubletFinder")
+#
+#   # Pinned to commit 729c31edf3 (SeuratWrappers 0.3.0, Dec 2021), NOT the
+#   # default master branch: master (SeuratWrappers >= 0.4.0) hard-requires
+#   # Seurat >= 5.0.0 and Banksy (which itself requires R >= 4.4), both
+#   # incompatible with this R 4.2 / Seurat 4.x environment. 729c31edf3 only
+#   # requires Seurat >= 3.0.1 and is the commit that fixed as.cell_data_set()
+#   # for monocle3 1.x. Do NOT use the older "community-vignette" branch
+#   # (SeuratWrappers 0.2.0): its as.cell_data_set() fails with monocle3 1.3.1
+#   # with "no slot of name 'preprocess_aux'" (confirmed 2026-10-14).
+#   remotes::install_github("satijalab/seurat-wrappers@729c31edf3", upgrade = "never")
+#
+#   # CellChat needs NMF >= 0.23.0, but conda-forge's r-nmf feedstock has
+#   # dropped R 4.2 support - its newest R4.2-tagged ("r42") build is still
+#   # stuck at 0.21.0, which is too old and makes CellChat fail to load with
+#   # "namespace 'NMF' 0.21.0 is being loaded, but >= 0.23.0 is required".
+#   # Fix: swap conda's NMF for a fresh one built from CRAN source (NMF only
+#   # requires R >= 3.0.0, so this is safe - it's a conda packaging gap, not
+#   # a real R 4.2 incompatibility). NMF's own deps (pkgmaker, registry,
+#   # rngtools, doParallel, foreach) are already installed via conda above,
+#   # so this is just a quick source rebuild of the one package.
+#   remove.packages("NMF")
+#   install.packages("NMF")
+#
+#   # CellChat (GitHub-only, no CRAN/Bioconductor release). Version 1.6.1's
+#   # DESCRIPTION only Suggests Seurat (>= 4.0.0) - unlike Banksy/SeuratWrappers
+#   # master, it does NOT hard-require Seurat 5, so it installs cleanly on
+#   # this R 4.2 / Seurat 4.x environment with no branch pinning needed.
+#   devtools::install_github("sqjin/CellChat")
+#
+#   # Monocle3 (Week 4, Sec 9). Pinned to v1.3.1 - see the dependencies
+#   # comment above for why (avoids the current release's R >= 4.4.1
+#   # requirement). leidenbase is needed first. Use 0.1.37 from CRAN (only
+#   # needs R >= 3.5; conda-forge has no R 4.2 build of it): the older
+#   # GitHub tag v0.1.9 is incompatible with conda's igraph 2.0 and makes
+#   # cluster_cells() fail with "REAL() can only be applied to a 'numeric',
+#   # not a 'NULL'" (confirmed 2026-10-14).
+#   remotes::install_version("leidenbase", version = "0.1.37", upgrade = "never")
+#
+#   # terra (a monocle3 dependency): r-terra has dropped R 4.2 support the
+#   # same way r-nmf did, so it is compiled here from CRAN source against
+#   # the gdal/geos/proj C libraries installed via conda above. On Apple
+#   # Silicon (confirmed 2026-09-24, reconfirmed on a from-scratch rebuild
+#   # 2026-09-26, Rosetta osx-64 build) this hits THREE separate problems in
+#   # a row before it works - problem 2 below is a genuine, reproducible
+#   # step (not a one-off), confirmed by hitting it identically on both
+#   # installs. Problem 2 (the too-old conda Rcpp) is platform-independent
+#   # and also hits Linux (confirmed 2026-09-27) - there, reinstalling Rcpp
+#   # from CRAN is the only fix needed (see environment-linux.yml). Problems
+#   # 1 and 3 (rpath/dyld linking) are macOS-only:
+#   #
+#   # 1) configure compiles a small test binary (gdal_proj) directly using
+#   #    gdal-config's own --libs output, which conda's gdal-config does
+#   #    not include an rpath in. That test binary then fails at RUN time:
+#   #    "Library not loaded: @rpath/libgdal.35.dylib ... no LC_RPATH's
+#   #    found". Neither LDFLAGS nor DYLD_LIBRARY_PATH fix this - terra's
+#   #    configure links this one test with $LIBS only (no LDFLAGS), and
+#   #    DYLD_* env vars get silently stripped by macOS SIP as soon as they
+#   #    cross the /bin/sh that runs ./configure. Fix: a small wrapper
+#   #    around the real gdal-config that appends -Wl,-rpath,$CONDA_PREFIX/lib
+#   #    to --libs output, so the rpath is baked into the compiler command
+#   #    line itself. Create it once per checkout, from this projects/
+#   #    directory:
+#   #
+#   #      mkdir -p build-helpers
+#   #      cat > build-helpers/gdal-config-wrapper <<'WRAPPER'
+#   #      #!/bin/sh
+#   #      REAL_GDAL_CONFIG="$CONDA_PREFIX/bin/gdal-config"
+#   #      if [ -z "$CONDA_PREFIX" ]; then
+#   #        echo "gdal-config-wrapper: CONDA_PREFIX not set - activate the env first" >&2
+#   #        exit 1
+#   #      fi
+#   #      case "$1" in
+#   #        --libs|--dep-libs)
+#   #          "$REAL_GDAL_CONFIG" "$@" | sed "s|\$| -Wl,-rpath,${CONDA_PREFIX}/lib|"
+#   #          ;;
+#   #        *)
+#   #          exec "$REAL_GDAL_CONFIG" "$@"
+#   #          ;;
+#   #      esac
+#   #      WRAPPER
+#   #      chmod +x build-helpers/gdal-config-wrapper
+#   #
+#   # 2) Once (1) is fixed, configure proceeds but the actual C++ compile
+#   #    then fails: "no matching member function for call to 'constructor'"
+#   #    in RcppModule.cpp, because terra declares an 11-template-argument
+#   #    Rcpp Modules constructor for SpatRaster/SpatRasterStack, while
+#   #    conda's r-rcpp package only generates overloads up to 7 arguments
+#   #    (visible in the error as candidates up to yes_arity<7>). This is
+#   #    not terra-version-specific - even terra's current GitHub master
+#   #    branch has this same 11-arg constructor - so pinning to an older
+#   #    terra release does not avoid it; conda's Rcpp build is simply too
+#   #    old. Fix: reinstall Rcpp from CRAN source (same fix pattern as the
+#   #    earlier NMF version-floor issue - Rcpp's own R requirement is very
+#   #    low, so this is safe even though nearly everything compiled in
+#   #    this environment, Seurat included, is built on Rcpp):
+#   #
+#   #      remove.packages("Rcpp")
+#   #      install.packages("Rcpp")
+#   #
+#   # 3) R's own conda build already adds a working rpath automatically to
+#   #    every compiled package's final link step (visible in the "R CMD
+#   #    SHLIB" build output as its own -Wl,-rpath,$CONDA_PREFIX/lib flag),
+#   #    so the wrapper's flag from (1) ends up duplicated in the final
+#   #    terra.dylib (configure also reuses the same captured GDAL_LIBS
+#   #    value twice while assembling the combined LIBS string, so it can
+#   #    even triple up). Recent macOS dyld rejects a dylib with a
+#   #    duplicate LC_RPATH outright ("duplicate LC_RPATH '...'") instead
+#   #    of ignoring it, so the package fails its post-install load test
+#   #    and gets rolled back. Fix: install with --no-test-load so the
+#   #    (still-broken) build stays on disk, then de-duplicate the rpath
+#   #    entries directly with install_name_tool:
+#   #
+#   #      install.packages("terra", configure.args = paste0(
+#   #        "--with-gdal-config=", normalizePath("build-helpers/gdal-config-wrapper")),
+#   #        INSTALL_opts = "--no-test-load")
+#   #
+#   #    then in a terminal (same env activated):
+#   #
+#   #      DYLIB="$CONDA_PREFIX/lib/R/library/terra/libs/terra.dylib"
+#   #      COUNT=$(otool -l "$DYLIB" | grep -c "path $CONDA_PREFIX/lib ")
+#   #      for i in $(seq 1 $((COUNT-1))); do
+#   #        install_name_tool -delete_rpath "$CONDA_PREFIX/lib" "$DYLIB"
+#   #      done
+#   #
+#   # 4) After that, library(terra) loads normally - no further action
+#   #    needed. Steps 1 and 3 (the wrapper and the rpath dedup) do not need
+#   #    repeating for future package installs - they are specific to
+#   #    terra's own GDAL/PROJ configure test. Step 2 (the Rcpp reinstall)
+#   #    only needs doing once per environment too, since it replaces the
+#   #    installed Rcpp package itself, not something terra-specific.
+#   #
+#   # monocle3 from the course fork: release v1.3.1 plus one backported
+#   # upstream fix (commit 42fc8c4 from monocle3 1.4.14). Plain v1.3.1 fails
+#   # in cluster_cells() with igraph >= 2.0: "Adjacency matrix should be
+#   # symmetric to produce an undirected graph" (confirmed 2026-10-14).
+#   remotes::install_github("scb-icbb/monocle3@v1.3.1-igraph2", upgrade = "never")
+#
+#   # only if Seurat's clustering functions error out:
+#   remove.packages(grep("spatstat", installed.packages(), value = TRUE))
+#   devtools::install_version("spatstat", version = "2.4.4")
+#   install.packages("Matrix", ".", type = "source",
+#                     repos = "http://R-Forge.R-project.org")
+#
+# --- If the conda/mamba solve itself fails or hangs on Apple Silicon ---
+# Some other packages above may also lack osx-arm64 builds. Fall back to
+# running the Intel (osx-64) build under Rosetta 2:
+#
+#   CONDA_SUBDIR=osx-64 mamba env create -f environment-mac.yml
+#   conda activate single-cell
+#   conda config --env --set subdir osx-64
+#
+# --- If you also have R installed via Homebrew (VS Code / other IDE users) ---
+# If you use an IDE (e.g. VS Code) rather than a plain terminal, plain `R`
+# after `conda activate single-cell` can silently launch a *different*,
+# unrelated R (e.g. Homebrew's, at /opt/homebrew/bin/R) instead of this
+# environment's R - CONDA_PREFIX will still show single-cell, but packages like
+# CellChat will look "not installed" because you're in the wrong R entirely.
+# This happens when something (often a `brew shellenv` line placed after
+# the conda-init block in your shell config, or how the IDE launches its
+# terminal) puts Homebrew's bin directory ahead of the conda env's on PATH.
+#
+# Quick check:
+#   which R                     # should print .../miniforge3/envs/single-cell/bin/R
+#
+# Reliable fix regardless of PATH order - call the env's R explicitly:
+#   $CONDA_PREFIX/bin/R
+# or, in VS Code's R extension settings, set r.rpath.mac to the full path:
+#   /Users/<you>/miniforge3/envs/single-cell/bin/R
+#
+# Permanent fix: in ~/.zshrc (or ~/.zprofile), make sure the conda-initialize
+# block comes AFTER any `eval "$(/opt/homebrew/bin/brew shellenv)"` line, so
+# conda's PATH entry ends up first for every new terminal.

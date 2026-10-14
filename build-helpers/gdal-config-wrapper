@@ -1,0 +1,32 @@
+#!/bin/sh
+# Wrapper around this conda env's real gdal-config - see comment history in
+# environment-mac.yml for background. Appends -Wl,-rpath,$CONDA_PREFIX/lib to
+# --libs output so compiled test binaries (and the final package) can find
+# conda's GDAL at runtime. Uses a marker file in the current build directory
+# to inject the flag only ONCE per build, since configure queries --libs
+# more than once (GDAL directly, then again via GEOS) and macOS's dyld
+# rejects a binary with a duplicate LC_RPATH entry.
+
+REAL_GDAL_CONFIG="$CONDA_PREFIX/bin/gdal-config"
+
+if [ -z "$CONDA_PREFIX" ]; then
+  echo "gdal-config-wrapper: CONDA_PREFIX is not set - activate the single-cell environment first" >&2
+  exit 1
+fi
+
+MARKER="$PWD/.gdal-config-wrapper-rpath-added"
+
+case "$1" in
+  --libs|--dep-libs)
+    OUT=$("$REAL_GDAL_CONFIG" "$@")
+    if [ -f "$MARKER" ]; then
+      echo "$OUT"
+    else
+      touch "$MARKER" 2>/dev/null
+      echo "$OUT -Wl,-rpath,${CONDA_PREFIX}/lib"
+    fi
+    ;;
+  *)
+    exec "$REAL_GDAL_CONFIG" "$@"
+    ;;
+esac
