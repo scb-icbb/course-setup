@@ -4,7 +4,6 @@ In Project 2 you analyse scATAC-seq data with **ArchR**. You do **not** need a n
 
 **Time:** about 20 to 40 minutes, most of it waiting for downloads.
 **Disk space:** about 3 GB free. The human genome package (hg38) alone is about 800 MB.
-**Internet:** needed for the whole installation.
 **Windows:** do every step inside your WSL (Ubuntu) terminal, exactly as for Project 1 (see `README-Windows.md`).
 
 ---
