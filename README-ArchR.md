@@ -125,7 +125,6 @@ If all of this works, you are ready for Project 2.
 
 | Problem | Fix |
 |---|---|
-
 | mamba fails with `Could not solve for environment specs` | Run the command again without `--freeze-installed`, read the list as described in Step 4, and only continue if it says Install. Otherwise ask a tutor. |
 | The install script stops with `HTTP error 403` or `API rate limit exceeded` | GitHub limits anonymous downloads. Wait an hour and run the script again, or create a GitHub token and set it as `GITHUB_PAT` before running the script. |
 | The install script stops with `ArchR source does not look like v1.0.3 - patch not applied` | Ask a tutor. Don't install ArchR another way. |
