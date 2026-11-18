@@ -102,6 +102,7 @@ Start R from the activated environment and run:
 ```r
 library(Seurat)
 library(ArchR)
+library(BSgenome.Hsapiens.UCSC.hg38)   # needed for peak calling in Week 2
 addArchRGenome("hg38")
 packageVersion("ArchR")      # 1.0.3
 packageVersion("Seurat")     # 4.4.0
@@ -137,5 +138,6 @@ If all of this works, you are ready for Project 2.
 | ArchR compile fails with `clang: command not found` or `xcrun: error` (Mac) | Install the Xcode command line tools with `xcode-select --install`, then run Step 5 again. |
 | `addGeneIntegrationMatrix` fails with `length of 'dimnames' [1] not equal to array extent` | You have an ArchR without the course fix. Run Step 5 again. |
 | ArchR fails with `unable to lock file` or another HDF5 error | Your data is probably on a network drive or, on WSL, under `/mnt/c/...`. Move the project into your home folder (for example `~/scb/`). If that isn't possible, run `Sys.setenv(HDF5_USE_FILE_LOCKING = "FALSE")` in R before `library(ArchR)`. |
+| `addGroupCoverages` stops with `object 'BSgenome.Hsapiens.UCSC.hg38' not found` | Run `library(BSgenome.Hsapiens.UCSC.hg38)` in R first. If that fails, the genome package is missing: run the Step 4 command again. |
 | `findMacs2()` says `Could Not Find Macs2!` | Start R from the activated environment (so that `macs2` is on your PATH). Check in the terminal with `macs2 --version`. If it is missing, run `mamba install -c conda-forge -c bioconda macs2` (with `CONDA_SUBDIR=osx-64` in front if Step 4 told you so). |
 | Something is broken and you made the backup in Step 2 | Run `conda activate single-cell-backup`, which is your environment as it was before Step 4. |
